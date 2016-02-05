@@ -708,6 +708,7 @@ LIBBZ2
 MAINT
 MAINTAINER_MODE_FALSE
 MAINTAINER_MODE_TRUE
+pcreconfig
 HAVE_LIBXML2_FALSE
 HAVE_LIBXML2_TRUE
 XML_LIBS
@@ -1643,9 +1644,9 @@ Optional Packages:
   --with-libjson[=DIR]    path to directory containing libjson
                           [default=/usr/local or /usr if not found in
                           /usr/local]
-  --with-pcre[=DIR]       path to directory containing libpcre library
-                          [default=/usr/local or /usr if not found in
-                          /usr/local]
+  --with-pcre[=DIR]       path to directory containing libpcre library,
+                          prioritizes PCRE2 over PCRE [default=search PATH
+                          environment variable]
   --with-zlib[=DIR]       path to directory containing zlib library
                           [default=/usr/local or /usr if not found in
                           /usr/local]
@@ -17767,118 +17768,279 @@ LIBS="$save_LIBS"
 
 
 
-PCRE_HOME=""
 
 # Check whether --with-pcre was given.
 if test "${with_pcre+set}" = set; then :
-  withval=$with_pcre;
-  PCRE_HOME=$withval
-
+  withval=$with_pcre; pcreser=$withval
 else
-
-  PCRE_HOME="yes"
-
+  pcreser="yes"
 fi
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for libpcre installation" >&5
-$as_echo_n "checking for libpcre installation... " >&6; }
-case "$PCRE_HOME" in
+case "$pcreser" in
 no)
-  PCRE_HOME=""
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
+  pcreconfig=""
   ;;
 yes)
-  PCRE_HOME=/usr/local
-  if test ! -x "$PCRE_HOME/bin/pcre-config"; then
-    PCRE_HOME=/usr
-    if test ! -x "$PCRE_HOME/bin/pcre-config"; then
-      PCRE_HOME=""
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+    # Extract the first word of "pcre2-config", so it can be a program name with args.
+set dummy pcre2-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_pcreconfig+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $pcreconfig in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_pcreconfig="$pcreconfig" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_pcreconfig="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+pcreconfig=$ac_cv_path_pcreconfig
+if test -n "$pcreconfig"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $pcreconfig" >&5
+$as_echo "$pcreconfig" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
-      { $as_echo "$as_me:${as_lineno-$LINENO}: cannot locate libpcre at /usr/local or /usr" >&5
-$as_echo "$as_me: cannot locate libpcre at /usr/local or /usr" >&6;}
-    fi
+fi
+
+
+  if test "x$pcreconfig" = "x"; then
+      # Extract the first word of "pcre-config", so it can be a program name with args.
+set dummy pcre-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_pcreconfig+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $pcreconfig in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_pcreconfig="$pcreconfig" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_pcreconfig="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+pcreconfig=$ac_cv_path_pcreconfig
+if test -n "$pcreconfig"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $pcreconfig" >&5
+$as_echo "$pcreconfig" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+      if test "x$pcreconfig" = "x"; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: cannot locate libpcre2 or libpcre within PATH" >&5
+$as_echo "$as_me: cannot locate libpcre2 or libpcre within PATH" >&6;}
+      else
+         pcrelib="pcre"
+      fi
+  else
+      pcrelib="pcre2"
   fi
   ;;
 "")
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: " >&5
-$as_echo "" >&6; }
   as_fn_error $? "cannot assign blank value to --with-pcre" "$LINENO" 5
   ;;
 *)
-  PCRE_HOME="$withval"
-  if test ! -x "$PCRE_HOME/bin/pcre-config"; then
-    PCRE_HOME=""
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
-$as_echo "not found" >&6; }
-    as_fn_error $? "cannot locate libpcre at $withval" "$LINENO" 5
+  # Extract the first word of "pcre2-config", so it can be a program name with args.
+set dummy pcre2-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_pcreconfig+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $pcreconfig in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_pcreconfig="$pcreconfig" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $pcreser/bin
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_pcreconfig="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+pcreconfig=$ac_cv_path_pcreconfig
+if test -n "$pcreconfig"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $pcreconfig" >&5
+$as_echo "$pcreconfig" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  if test "x$pcreconfig" = "x"; then
+      # Extract the first word of "pcre-config", so it can be a program name with args.
+set dummy pcre-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_pcreconfig+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $pcreconfig in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_pcreconfig="$pcreconfig" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $pcreser/bin
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_pcreconfig="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+pcreconfig=$ac_cv_path_pcreconfig
+if test -n "$pcreconfig"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $pcreconfig" >&5
+$as_echo "$pcreconfig" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+      if test "x$pcreconfig" = "x"; then
+          as_fn_error $? "cannot locate libpcre2 or libpcre at $pcreser" "$LINENO" 5
+      else
+         pcrelib="pcre"
+      fi
+  else
+      pcrelib="pcre2"
   fi
   ;;
 esac
 
-if test "x$PCRE_HOME" != "x"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: using $PCRE_HOME" >&5
-$as_echo "using $PCRE_HOME" >&6; }
-fi
-
 found_pcre="no"
-PCRECONF_VERSION=""
-PCRE_CPPFLAGS=""
-PCRE_LIBS=""
-if test "x$PCRE_HOME" != "x"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking pcre-config version" >&5
+if test "x$pcreconfig" != "x"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking pcre-config version" >&5
 $as_echo_n "checking pcre-config version... " >&6; }
-  PCRECONF_VERSION="`$PCRE_HOME/bin/pcre-config --version`"
+    pcre_version="`$pcreconfig --version`"
 
-  if test "x$PCRECONF_VERSION" == "x"; then
-    as_fn_error $? "pcre-config failed" "$LINENO" 5
-  fi
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PCRECONF_VERSION" >&5
-$as_echo "$PCRECONF_VERSION" >&6; }
-
-  pcrever_major=`echo "$PCRECONF_VERSION" | sed -e 's/\([0-9]*\).*/\1/'`
-  pcrever_minor=`echo "$PCRECONF_VERSION" | sed -e 's/[0-9]*\.\([0-9]*\).*/\1/'`
-
-  if test $pcrever_major -lt 6; then
-    as_fn_error $? "This pcre version is missing features used by ClamAV. Please upgrade to a newer version: http://www.pcre.org." "$LINENO" 5
-  fi
-  if test $pcrever_major -eq 6 && test $pcrever_minor -lt 5; then
-    as_fn_error $? "This pcre version is missing features used by ClamAV. Please upgrade to a newer version: http://www.pcre.org." "$LINENO" 5
-  fi
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for CVE-2015-3210" >&5
-$as_echo_n "checking for CVE-2015-3210... " >&6; }
-  if test $pcrever_major -eq 8; then
-    if test $pcrever_minor -gt 33 && test $pcrever_minor -lt 38; then
-       { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-       { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: The installed pcre version may contain a security bug. Please upgrade to 8.38 or later: http://www.pcre.org." >&5
-$as_echo "$as_me: WARNING: The installed pcre version may contain a security bug. Please upgrade to 8.38 or later: http://www.pcre.org." >&2;}
-    else
-       { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
-$as_echo "ok" >&6; }
+    if test "x$pcre_version" = "x"; then
+        as_fn_error $? "$pcreconfig failed" "$LINENO" 5
     fi
-  else
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
-$as_echo "ok" >&6; };
-  fi
-  found_pcre="yes"
-  PCRE_CPPFLAGS="`$PCRE_HOME/bin/pcre-config --cflags`"
-  PCRE_LIBS="`$PCRE_HOME/bin/pcre-config --libs`"
 
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $pcre_version" >&5
+$as_echo "$pcre_version" >&6; }
+    pcrever_major=`echo "$pcre_version" | sed -e 's/\([0-9]\+\).*/\1/'`
+    pcrever_minor=`echo "$pcre_version" | sed -e 's/[0-9]\+\.\([0-9]\+\).*/\1/'`
+
+        if test "$pcrelib" = "pcre"; then
+        if test $pcrever_major -lt 6; then
+            as_fn_error $? "This pcre version is missing features used by ClamAV. Please upgrade to a newer version: http://www.pcre.org." "$LINENO" 5
+        fi
+        if test $pcrever_major -eq 6 && test $pcrever_minor -lt 5; then
+            as_fn_error $? "This pcre version is missing features used by ClamAV. Please upgrade to a newer version: http://www.pcre.org." "$LINENO" 5
+        fi
+    fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for CVE-2015-3210" >&5
+$as_echo_n "checking for CVE-2015-3210... " >&6; }
+    if test "$pcrelib" = "pcre2"; then
+        if test $pcrever_major -eq 10 && test $pcrever_minor -eq 10; then
+            { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: The installed pcre2 version may contain a security bug. Please upgrade to 10.20 or later: http://www.pcre.org." >&5
+$as_echo "$as_me: WARNING: The installed pcre2 version may contain a security bug. Please upgrade to 10.20 or later: http://www.pcre.org." >&2;}
+        else
+            { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
+$as_echo "ok" >&6; }
+        fi
+    else
+        if test $pcrever_major -eq 8 &&
+          test $pcrever_minor -gt 33 && test $pcrever_minor -lt 38; then
+            { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: The installed pcre version may contain a security bug. Please upgrade to 8.38 or later: http://www.pcre.org." >&5
+$as_echo "$as_me: WARNING: The installed pcre version may contain a security bug. Please upgrade to 8.38 or later: http://www.pcre.org." >&2;}
+        else
+            { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
+$as_echo "ok" >&6; }
+        fi
+    fi
+
+    found_pcre="yes"
+    PCRE_HOME="`$pcreconfig --prefix`"
+    PCRE_CPPFLAGS="`$pcreconfig --cflags`"
+    if test "$pcrelib" = "pcre2"; then
+        PCRE_LIBS="`$pcreconfig --libs8`"
+    else
+        PCRE_LIBS="`$pcreconfig --libs`"
+    fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: CFLAGS from pcre-config: $PCRE_CPPFLAGS" >&5
+$as_echo "$as_me: CFLAGS from pcre-config: $PCRE_CPPFLAGS" >&6;}
+    { $as_echo "$as_me:${as_lineno-$LINENO}: LIBS from pcre-config: $PCRE_LIBS" >&5
+$as_echo "$as_me: LIBS from pcre-config: $PCRE_LIBS" >&6;}
 fi
 
 have_pcre="no"
 if test "x$found_pcre" != "xno"; then
     save_CPPFLAGS="$CPPFLAGS"
-  CPPFLAGS="$CPPFLAGS $PCRE_CPPFLAGS"
+  CPPFLAGS=$PCRE_CPPFLAGS
   save_LDFLAGS="$LDFLAGS"
-  LDFLAGS="$LDFLAGS $PCRE_LIBS"
+  LDFLAGS=$PCRE_LIBS
 
-  ac_fn_c_check_header_mongrel "$LINENO" "pcre.h" "ac_cv_header_pcre_h" "$ac_includes_default"
+    if test "$pcrelib" = "pcre2"; then
+
+      have_pcre="yes"
+  else
+      ac_fn_c_check_header_mongrel "$LINENO" "pcre.h" "ac_cv_header_pcre_h" "$ac_includes_default"
 if test "x$ac_cv_header_pcre_h" = xyes; then :
   have_pcre="yes"
 else
@@ -17886,8 +18048,8 @@ else
 fi
 
 
-  if test "x$have_pcre" = "xno"; then
-    ac_fn_c_check_header_mongrel "$LINENO" "pcre/pcre.h" "ac_cv_header_pcre_pcre_h" "$ac_includes_default"
+      if test "x$have_pcre" = "xno"; then
+        ac_fn_c_check_header_mongrel "$LINENO" "pcre/pcre.h" "ac_cv_header_pcre_pcre_h" "$ac_includes_default"
 if test "x$ac_cv_header_pcre_pcre_h" = xyes; then :
   have_pcre="yes"
 else
@@ -17895,10 +18057,10 @@ else
 fi
 
 
-  fi
+      fi
 
-  if test "x$have_pcre" = "xyes"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pcre_compile in -lpcre" >&5
+      if test "x$have_pcre" = "xyes"; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pcre_compile in -lpcre" >&5
 $as_echo_n "checking for pcre_compile in -lpcre... " >&6; }
 if ${ac_cv_lib_pcre_pcre_compile+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -17940,6 +18102,7 @@ else
   have_pcre="no"
 fi
 
+      fi
   fi
 
     CPPFLAGS="$save_CPPFLAGS"
@@ -17950,8 +18113,17 @@ if test "x$have_pcre" = "xyes"; then
 
 $as_echo "#define HAVE_PCRE 1" >>confdefs.h
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: Compiling and linking with libpcre from $PCRE_HOME" >&5
-$as_echo "$as_me: Compiling and linking with libpcre from $PCRE_HOME" >&6;}
+
+  if test "$pcrelib" = "pcre2"; then
+
+$as_echo "#define USING_PCRE2 1" >>confdefs.h
+
+      { $as_echo "$as_me:${as_lineno-$LINENO}: Compiling and linking with pcre2 from $PCRE_HOME" >&5
+$as_echo "$as_me: Compiling and linking with pcre2 from $PCRE_HOME" >&6;}
+  else
+      { $as_echo "$as_me:${as_lineno-$LINENO}: Compiling and linking with pcre from $PCRE_HOME" >&5
+$as_echo "$as_me: Compiling and linking with pcre from $PCRE_HOME" >&6;}
+  fi
 fi
 
 

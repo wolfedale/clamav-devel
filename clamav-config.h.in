@@ -285,7 +285,7 @@
 /* Define to 1 if you have the `opendir' function. */
 #undef HAVE_OPENDIR
 
-/* Define to 1 if you have the 'libpcre' library (-lpcre). */
+/* Define to 1 if you have a pcre library (-lpcre). */
 #undef HAVE_PCRE
 
 /* Define to 1 if you have the `poll' function. */
@@ -566,6 +566,9 @@
 # undef __EXTENSIONS__
 #endif
 
+
+/* Define to 1 if you using the pcre2 library. */
+#undef USING_PCRE2
 
 /* Version number of package */
 #undef VERSION
