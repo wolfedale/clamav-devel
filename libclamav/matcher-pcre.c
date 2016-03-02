@@ -39,13 +39,6 @@
 #include "regex_pcre.h"
 
 #if HAVE_PCRE
-#if USING_PCRE2
-#define PCRE2_CODE_UNIT_WIDTH 8
-#include <pcre2.h>
-#else
-#include <pcre.h>
-#endif
-
 /* DEBUGGING */
 //#define MATCHER_PCRE_DEBUG
 #ifdef MATCHER_PCRE_DEBUG
@@ -179,7 +172,7 @@ void cli_pcre_perf_print()
     while (elem->run_count) {
         cli_infomsg (NULL, "%-*s %*lu %*lu %*llu %*.2f\n", max_name_len, elem->name,
                      8, elem->run_count, 8, elem->match_count,
-                     12, (long long unsigned)elem->usecs, 9, (double)elem->usecs/elem->run_count);
+                     12, elem->usecs, 9, (double)elem->usecs/elem->run_count);
         elem++;
     }
 }
@@ -344,17 +337,6 @@ int cli_pcre_addpatt(struct cli_matcher *root, const char *virname, const char *
             pm_dbgmsg("Matcher:  NONE\n");
 
         if (pm->pdata.options) {
-#if USING_PCRE2
-            pm_dbgmsg("Compiler: %s%s%s%s%s%s%s\n",
-                      pm->pdata.options & PCRE2_CASELESS ? "PCRE2_CASELESS " : "",
-                      pm->pdata.options & PCRE2_DOTALL ? "PCRE2_DOTALL " : "",
-                      pm->pdata.options & PCRE2_MULTILINE ? "PCRE2_MULTILINE " : "",
-                      pm->pdata.options & PCRE2_EXTENDED ? "PCRE2_EXTENDED " : "",
-
-                      pm->pdata.options & PCRE2_ANCHORED ? "PCRE2_ANCHORED " : "",
-                      pm->pdata.options & PCRE2_DOLLAR_ENDONLY ? "PCRE2_DOLLAR_ENDONLY " : "",
-                      pm->pdata.options & PCRE2_UNGREEDY ? "PCRE2_UNGREEDY " : "");
-#else
             pm_dbgmsg("Compiler: %s%s%s%s%s%s%s\n",
                       pm->pdata.options & PCRE_CASELESS ? "PCRE_CASELESS " : "",
                       pm->pdata.options & PCRE_DOTALL ? "PCRE_DOTALL " : "",
@@ -364,7 +346,6 @@ int cli_pcre_addpatt(struct cli_matcher *root, const char *virname, const char *
                       pm->pdata.options & PCRE_ANCHORED ? "PCRE_ANCHORED " : "",
                       pm->pdata.options & PCRE_DOLLAR_ENDONLY ? "PCRE_DOLLAR_ENDONLY " : "",
                       pm->pdata.options & PCRE_UNGREEDY ? "PCRE_UNGREEDY " : "");
-#endif
         }
         else
             pm_dbgmsg("Compiler: NONE\n");
@@ -428,15 +409,11 @@ int cli_pcre_build(struct cli_matcher *root, long long unsigned match_limit, lon
         }
 
         /* options override through metadata manipulation */
-#if USING_PCRE2
-        //pm->pdata.options |= PCRE2_NEVER_UTF; /* disables (?UTF*) potential security vuln */
-        //pm->pdata.options |= PCRE2_UCP;
-        //pm->pdata.options |= PCRE2_AUTO_CALLOUT; /* used with CALLOUT(-BACK) function */
-#else
-        //pm->pdata.options |= PCRE_NEVER_UTF; /* implemented in 8.33, disables (?UTF*) potential security vuln */
+#ifdef PCRE_NEVER_UTF
+        pm->pdata.options |= PCRE_NEVER_UTF; /* implemented in 8.33, disables (?UTF*) potential security vuln */
+#endif
         //pm->pdata.options |= PCRE_UCP;/* implemented in 8.20 */
         //pm->pdata.options |= PCRE_AUTO_CALLOUT; /* used with CALLOUT(-BACK) function */
-#endif
 
         if (dconf && (dconf->pcre & PCRE_CONF_OPTIONS)) {
             /* compile the regex, no options override *wink* */
@@ -587,19 +564,19 @@ int cli_pcre_scanbuf(const unsigned char *buffer, uint32_t length, const char **
 {
     struct cli_pcre_meta **metatable = root->pcre_metatable, *pm = NULL;
     struct cli_pcre_data *pd;
-    struct cli_pcre_results p_res;
     struct cli_ac_result *newres;
     uint32_t adjbuffer, adjshift, adjlength;
     unsigned int i, evalcnt = 0;
     uint64_t maxfilesize, evalids = 0;
     uint32_t global, encompass, rolling;
-    int rc, offset, ret = CL_SUCCESS, options=0;
+    int rc, lrc, offset, options=0, ovector[OVECCOUNT];
     uint8_t viruses_found = 0;
 
-    if ((root->pcre_metas == 0) || (!root->pcre_metatable) || (ctx && ctx->dconf && !(ctx->dconf->pcre & PCRE_CONF_SUPPORT)))
+    if ((!root->pcre_metatable) || (ctx && ctx->dconf && !(ctx->dconf->pcre & PCRE_CONF_SUPPORT))) {
         return CL_SUCCESS;
+    }
 
-    memset(&p_res, 0, sizeof(p_res));
+    /* NOTE: moved pcre maxfilesize limit check to caller [matcher_run] */
 
     for (i = 0; i < root->pcre_metas; ++i) {
         pm = root->pcre_metatable[i];
@@ -651,11 +628,7 @@ int cli_pcre_scanbuf(const unsigned char *buffer, uint32_t length, const char **
 
         /* check for need to anchoring */
         if (!rolling && !adjshift && (adjbuffer != CLI_OFF_ANY))
-#if USING_PCRE2
-            options |= PCRE2_ANCHORED;
-#else
             options |= PCRE_ANCHORED;
-#endif
         else
             options = 0;
 
@@ -687,27 +660,23 @@ int cli_pcre_scanbuf(const unsigned char *buffer, uint32_t length, const char **
 
         /* if the global flag is set, loop through the scanning */
         do {
-            /* reset the match results */
-            if ((ret = cli_pcre_results_reset(&p_res, pd)) != CL_SUCCESS)
-                break;
-
             /* performance metrics */
             cli_event_time_start(p_sigevents, pm->sigtime_id);
-            rc = cli_pcre_match(pd, buffer+adjbuffer, adjlength, offset, options, &p_res);
+            rc = cli_pcre_match(pd, buffer+adjbuffer, adjlength, offset, options, ovector, OVECCOUNT);
             cli_event_time_stop(p_sigevents, pm->sigtime_id);
             /* if debug, generate a match report */
             if (cli_debug_flag)
-                cli_pcre_report(pd, buffer+adjbuffer, adjlength, rc, &p_res);
+                cli_pcre_report(pd, buffer+adjbuffer, adjlength, rc, ovector, OVECCOUNT);
 
             /* matched, rc shouldn't be >0 unless a full match occurs */
             if (rc > 0) {
-                cli_dbgmsg("cli_pcre_scanbuf: located regex match @ %d\n", adjbuffer+p_res.match[0]);
+                cli_dbgmsg("cli_pcre_scanbuf: located regex match @ %d\n", adjbuffer+ovector[0]);
 
                 /* check if we've gone over offset+shift */
                 if (!encompass && adjshift) {
-                    if (p_res.match[0] > adjshift) {
+                    if (ovector[0] > adjshift) {
                         /* ignore matched offset (outside of maxshift) */
-                        cli_dbgmsg("cli_pcre_scanbuf: match found outside of maxshift @%u\n", adjbuffer+p_res.match[0]);
+                        cli_dbgmsg("cli_pcre_scanbuf: match found outside of maxshift @%u\n", adjbuffer+ovector[0]);
                         break;
                     }
                 }
@@ -718,24 +687,23 @@ int cli_pcre_scanbuf(const unsigned char *buffer, uint32_t length, const char **
                 /* for logical signature evaluation */
                 if (pm->lsigid[0]) {
                     pm_dbgmsg("cli_pcre_scanbuf: assigning lsigcnt[%d][%d], located @ %d\n",
-                              pm->lsigid[1], pm->lsigid[2], adjbuffer+p_res.match[0]);
+                              pm->lsigid[1], pm->lsigid[2], adjbuffer+ovector[0]);
 
-                    ret = lsig_sub_matched(root, mdata, pm->lsigid[1], pm->lsigid[2], adjbuffer+p_res.match[0], 0);
-                    if (ret != CL_SUCCESS)
-                        break;
+                    lrc = lsig_sub_matched(root, mdata, pm->lsigid[1], pm->lsigid[2], adjbuffer+ovector[0], 0);
+                    if (lrc != CL_SUCCESS)
+                        return lrc;
                 } else {
                     /* for raw match data - sigtool only */
                     if(res) {
                         newres = (struct cli_ac_result *)cli_calloc(1, sizeof(struct cli_ac_result));
                         if(!newres) {
                             cli_errmsg("cli_pcre_scanbuff: Can't allocate memory for new result\n");
-                            ret = CL_EMEM;
-                            break;
+                            return CL_EMEM;
                         }
                         newres->virname = pm->virname;
                         newres->customdata = NULL; /* get value? */
                         newres->next = *res;
-                        newres->offset = adjbuffer+p_res.match[0];
+                        newres->offset = adjbuffer+ovector[0];
                         *res = newres;
                     } else {
                         if (ctx && SCAN_ALL) {
@@ -744,34 +712,44 @@ int cli_pcre_scanbuf(const unsigned char *buffer, uint32_t length, const char **
                         }
                         if (virname)
                             *virname = pm->virname;
-                        if (!ctx || !SCAN_ALL) {
-                            ret = CL_VIRUS;
-                            break;
-                        }
+                        if (!ctx || !SCAN_ALL)
+                            return CL_VIRUS;
                     }
                 }
             }
 
             /* move off to the end of the match for next match; offset is relative to adjbuffer
              * NOTE: misses matches starting within the last match; TODO: start from start of last match? */
-            offset = p_res.match[1];
+            offset = ovector[1];
+
+            /* clear the ovector results (they fall through the pcre_match) */
+            memset(ovector, 0, sizeof(ovector));
         } while (global && rc > 0 && offset < adjlength);
 
-        /* handle error code */
-        if (rc < 0 && p_res.err != CL_SUCCESS)
-            ret = p_res.err;
-
-        /* jumps out of main loop from 'global' loop */
-        if (ret != CL_SUCCESS)
-            break;
+        /* handle error codes */
+        if (rc < 0 && rc != PCRE_ERROR_NOMATCH) {
+            switch (rc) {
+            case PCRE_ERROR_CALLOUT:
+                break;
+            case PCRE_ERROR_NOMEMORY:
+                cli_errmsg("cli_pcre_scanbuf: cli_pcre_match: pcre_exec: out of memory\n");
+                return CL_EMEM;
+            case PCRE_ERROR_MATCHLIMIT:
+                cli_dbgmsg("cli_pcre_scanbuf: cli_pcre_match: pcre_exec: match limit exceeded\n");
+                break;
+            case PCRE_ERROR_RECURSIONLIMIT:
+                cli_dbgmsg("cli_pcre_scanbuf: cli_pcre_match: pcre_exec: recursive limit exceeded\n");
+                break;
+            default:
+                cli_errmsg("cli_pcre_scanbuf: cli_pcre_match: pcre_exec: returned error %d\n", rc);
+                return CL_BREAK;
+            }
+        }
     }
 
-    /* free match results */
-    cli_pcre_results_free(&p_res);
-
-    if (ret == CL_SUCCESS && viruses_found)
+    if (viruses_found)
         return CL_VIRUS;
-    return ret;
+    return CL_SUCCESS;
 }
 
 void cli_pcre_freemeta(struct cli_matcher *root, struct cli_pcre_meta *pm)
@@ -790,7 +768,7 @@ void cli_pcre_freemeta(struct cli_matcher *root, struct cli_pcre_meta *pm)
     }
 
     if (pm->statname) {
-        free(pm->statname);
+        mpool_free(root->mempool, pm->statname);
         pm->statname = NULL;
     }
 

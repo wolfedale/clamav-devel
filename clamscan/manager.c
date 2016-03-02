@@ -133,7 +133,7 @@ struct metachain {
 
 struct clamscan_cb_data {
     struct metachain * chain;
-    const char * filename;
+    char * filename;
 };
 
 static cl_error_t pre(int fd, const char *type, void *context)
@@ -277,7 +277,7 @@ static cl_error_t meta(const char* container_type, unsigned long fsize_container
 static void clamscan_virus_found_cb(int fd, const char *virname, void *context)
 {
     struct clamscan_cb_data *data = (struct clamscan_cb_data *)context;
-    const char * filename;
+    char * filename;
 
     if (data == NULL)
         return;
@@ -389,9 +389,9 @@ static void scanfile(const char *filename, struct cl_engine *engine, const struc
                 char str[128];
                 int toolong = print_chain(&chain, str, sizeof(str));
 
-                logg("~%s%s!(%llu)%s: %s FOUND\n", str, toolong ? "..." : "", (long long unsigned)(chain.lastvir-1), chain.chains[chain.nchains-1], virname);
+                logg("~%s%s!(%u)%s: %s FOUND\n", str, toolong ? "..." : "", chain.lastvir-1, chain.chains[chain.nchains-1], virname);
             } else if (chain.lastvir) {
-                logg("~%s!(%llu): %s FOUND\n", filename, (long long unsigned)(chain.lastvir-1), virname);
+                logg("~%s!(%u): %s FOUND\n", filename, chain.lastvir-1, virname);
             }
         }
         if (!(options & CL_SCAN_ALLMATCHES))
@@ -853,23 +853,6 @@ int scanmanager(const struct optstruct *opts)
         free(dbdir);
     }
 
-    /* pcre engine limits - required for cl_engine_compile */
-    if ((opt = optget(opts, "pcre-match-limit"))->active) {
-        if ((ret = cl_engine_set_num(engine, CL_ENGINE_PCRE_MATCH_LIMIT, opt->numarg))) {
-            logg("!cli_engine_set_num(CL_ENGINE_PCRE_MATCH_LIMIT) failed: %s\n", cl_strerror(ret));
-            cl_engine_free(engine);
-            return 2;
-        }
-    }
-
-    if ((opt = optget(opts, "pcre-recmatch-limit"))->active) {
-        if ((ret = cl_engine_set_num(engine, CL_ENGINE_PCRE_RECMATCH_LIMIT, opt->numarg))) {
-            logg("!cli_engine_set_num(CL_ENGINE_PCRE_RECMATCH_LIMIT) failed: %s\n", cl_strerror(ret));
-            cl_engine_free(engine);
-            return 2;
-        }
-    }
-
     if((ret = cl_engine_compile(engine)) != 0) {
         logg("!Database initialization error: %s\n", cl_strerror(ret));;
 
@@ -1003,19 +986,26 @@ int scanmanager(const struct optstruct *opts)
         }
     }
 
-    if((opt = optget(opts, "max-rechwp3"))->active) {
-        if((ret = cl_engine_set_num(engine, CL_ENGINE_MAX_RECHWP3, opt->numarg))) {
-            logg("!cli_engine_set_num(CL_ENGINE_MAX_RECHWP3) failed: %s\n", cl_strerror(ret));
+    if ((opt = optget(opts, "timelimit"))->active) {
+        if ((ret = cl_engine_set_num(engine, CL_ENGINE_TIME_LIMIT, opt->numarg))) {
+            logg("!cli_engine_set_num(CL_ENGINE_TIME_LIMIT) failed: %s\n", cl_strerror(ret));
 
             cl_engine_free(engine);
             return 2;
         }
     }
 
-    if ((opt = optget(opts, "timelimit"))->active) {
-        if ((ret = cl_engine_set_num(engine, CL_ENGINE_TIME_LIMIT, opt->numarg))) {
-            logg("!cli_engine_set_num(CL_ENGINE_TIME_LIMIT) failed: %s\n", cl_strerror(ret));
+    if ((opt = optget(opts, "pcre-match-limit"))->active) {
+        if ((ret = cl_engine_set_num(engine, CL_ENGINE_PCRE_MATCH_LIMIT, opt->numarg))) {
+            logg("!cli_engine_set_num(CL_ENGINE_PCRE_MATCH_LIMIT) failed: %s\n", cl_strerror(ret));
+            cl_engine_free(engine);
+            return 2;
+        }
+    }
 
+    if ((opt = optget(opts, "pcre-recmatch-limit"))->active) {
+        if ((ret = cl_engine_set_num(engine, CL_ENGINE_PCRE_RECMATCH_LIMIT, opt->numarg))) {
+            logg("!cli_engine_set_num(CL_ENGINE_PCRE_RECMATCH_LIMIT) failed: %s\n", cl_strerror(ret));
             cl_engine_free(engine);
             return 2;
         }
@@ -1077,12 +1067,6 @@ int scanmanager(const struct optstruct *opts)
     if(optget(opts, "scan-mail")->enabled)
         options |= CL_SCAN_MAIL;
 
-    if(optget(opts, "scan-xmldocs")->enabled)
-        options |= CL_SCAN_XMLDOCS;
-
-    if(optget(opts, "scan-hwp3")->enabled)
-        options |= CL_SCAN_HWP3;
-
     if(optget(opts, "algorithmic-detection")->enabled)
         options |= CL_SCAN_ALGORITHMIC;
 
@@ -1119,7 +1103,6 @@ int scanmanager(const struct optstruct *opts)
         if((opt = optget(opts, "structured-ssn-count"))->active) {
             if((ret = cl_engine_set_num(engine, CL_ENGINE_MIN_SSN_COUNT, opt->numarg))) {
                 logg("!cli_engine_set_num(CL_ENGINE_MIN_SSN_COUNT) failed: %s\n", cl_strerror(ret));
-
                 cl_engine_free(engine);
                 return 2;
             }
@@ -1132,6 +1115,23 @@ int scanmanager(const struct optstruct *opts)
                 return 2;
             }
         }
+
+        if((opt = optget(opts, "structured-mail-count"))->active) {
+            if((ret = cl_engine_set_num(engine, CL_ENGINE_MIN_MAIL_COUNT, opt->numarg))) {
+                logg("!cli_engine_set_num(CL_ENGINE_MIN_MAIL_COUNT) failed: %s\n", cl_strerror(ret));
+                cl_engine_free(engine);
+                return 2;
+            }
+        }
+
+        if((opt = optget(opts, "structured-phone-count"))->active) {
+            if((ret = cl_engine_set_num(engine, CL_ENGINE_MIN_PHONE_COUNT, opt->numarg))) {
+                logg("!cli_engine_set_num(CL_ENGINE_MIN_PHONE_COUNT) failed: %s\n", cl_strerror(ret));
+                cl_engine_free(engine);
+                return 2;
+            }
+        }
+
     } else {
         options &= ~CL_SCAN_STRUCTURED;
     }

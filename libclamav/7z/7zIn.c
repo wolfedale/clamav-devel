@@ -836,10 +836,6 @@ static SRes SzReadSubStreamsInfo(
           UInt32 numSubstreams = folder->NumUnpackStreams;
           if (numSubstreams == 1 && folder->UnpackCRCDefined)
           {
-            if (si >= *numUnpackStreams) {
-              cli_dbgmsg("SzReadSubStreamsInfo: more streams exist than specified, ignoring.\n");
-              continue;
-            }
             (*digestsDefined)[si] = 1;
             (*digests)[si] = folder->UnpackCRC;
             si++;
@@ -849,10 +845,6 @@ static SRes SzReadSubStreamsInfo(
             UInt32 j;
             for (j = 0; j < numSubstreams; j++, digestIndex++)
             {
-              if (si >= *numUnpackStreams) {
-                cli_dbgmsg("SzReadSubStreamsInfo: more streams exist than specified, ignoring(2).\n");
-                continue;
-              }
               (*digestsDefined)[si] = digestsDefined2[digestIndex];
               (*digests)[si] = digests2[digestIndex];
               si++;

@@ -5,7 +5,7 @@ AC_ARG_ENABLE(check,
 
 if test "$enable_check_ut" != "no" ; then
 
-PKG_CHECK_MODULES(CHECK, [check], [HAVE_LIBCHECK=yes], [HAVE_LIBCHECK=])
+PKG_CHECK_MODULES(CHECK, [check], [HAVE_LIBCHECK=yes], [HAVE_LIBCHECK=no])
 
 if test "X$HAVE_LIBCHECK" == "Xyes"; then
     CHECK_CPPFLAGS=$CHECK_CFLAGS

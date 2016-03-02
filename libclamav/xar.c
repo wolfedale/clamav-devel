@@ -715,8 +715,7 @@ int cli_scanxar(cli_ctx *ctx)
                     
                     if (avail_out == 0)
                         cli_dbgmsg("cli_scanxar: cli_LzmaDecode() produces no output for "
-                                   "avail_in %llu, avail_out %llu.\n",
-                                   (long long unsigned)avail_in, (long long unsigned)avail_out);
+                                   "avail_in %lu, avail_out %lu.\n", avail_in, avail_out);
 
                     if (a_hash_ctx != NULL)
                         xar_hash_update(a_hash_ctx, next_in, in_consumed, a_hash);                    
@@ -729,8 +728,8 @@ int cli_scanxar(cli_ctx *ctx)
                     /*            avail_out, in_consumed, avail_in); */
 
                     if (cli_writen(fd, buff, avail_out) < 0) {
-                        cli_dbgmsg("cli_scanxar: cli_writen error writing lzma temp file for %llu bytes.\n",
-                                   (long long unsigned)avail_out);
+                        cli_dbgmsg("cli_scanxar: cli_writen error writing lzma temp file for %li bytes.\n",
+                                   avail_out);
                         __lzma_wrap_free(NULL, buff);
                         cli_LzmaShutdown(&lz);
                         rc = CL_EWRITE;

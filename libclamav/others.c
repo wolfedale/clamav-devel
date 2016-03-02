@@ -334,6 +334,8 @@ struct cl_engine *cl_engine_new(void)
     new->maxfiles = CLI_DEFAULT_MAXFILES;
     new->min_cc_count = CLI_DEFAULT_MIN_CC_COUNT;
     new->min_ssn_count = CLI_DEFAULT_MIN_SSN_COUNT;
+    new->min_mail_count = CLI_DEFAULT_MIN_MAIL_COUNT;
+    new->min_phone_count = CLI_DEFAULT_MIN_PHONE_COUNT;
     /* Engine Max sizes */
     new->maxembeddedpe = CLI_DEFAULT_MAXEMBEDDEDPE;
     new->maxhtmlnormalize = CLI_DEFAULT_MAXHTMLNORMALIZE;
@@ -444,7 +446,6 @@ struct cl_engine *cl_engine_new(void)
 
     /* Engine max settings */
     new->maxiconspe = CLI_DEFAULT_MAXICONSPE;
-    new->maxrechwp3 = CLI_DEFAULT_MAXRECHWP3;
 
     /* PCRE matching limitations */
 #if HAVE_PCRE
@@ -539,6 +540,12 @@ int cl_engine_set_num(struct cl_engine *engine, enum cl_engine_field field, long
 	case CL_ENGINE_MIN_CC_COUNT:
 	    engine->min_cc_count = num;
 	    break;
+        case CL_ENGINE_MIN_MAIL_COUNT:
+            engine->min_mail_count = num;
+            break;
+        case CL_ENGINE_MIN_PHONE_COUNT:
+            engine->min_phone_count = num;
+            break;
 	case CL_ENGINE_MIN_SSN_COUNT:
 	    engine->min_ssn_count = num;
 	    break;
@@ -617,9 +624,6 @@ int cl_engine_set_num(struct cl_engine *engine, enum cl_engine_field field, long
 	case CL_ENGINE_MAX_ICONSPE:
 	    engine->maxiconspe = (uint32_t)num;
 	    break;
-    case CL_ENGINE_MAX_RECHWP3:
-	    engine->maxrechwp3 = (uint32_t)num;
-	    break;
 	case CL_ENGINE_TIME_LIMIT:
             engine->time_limit = (uint32_t)num;
             break;
@@ -677,6 +681,10 @@ long long cl_engine_get_num(const struct cl_engine *engine, enum cl_engine_field
 	    return engine->min_cc_count;
 	case CL_ENGINE_MIN_SSN_COUNT:
 	    return engine->min_ssn_count;
+        case CL_ENGINE_MIN_MAIL_COUNT:
+            return engine->min_mail_count;
+        case CL_ENGINE_MIN_PHONE_COUNT:
+            return engine->min_phone_count;
 	case CL_ENGINE_DB_VERSION:
 	    return engine->dbversion[0];
 	case CL_ENGINE_DB_TIME:
@@ -705,8 +713,6 @@ long long cl_engine_get_num(const struct cl_engine *engine, enum cl_engine_field
 	    return engine->maxpartitions;
 	case CL_ENGINE_MAX_ICONSPE:
 	    return engine->maxiconspe;
-    case CL_ENGINE_MAX_RECHWP3:
-	    return engine->maxrechwp3;
 	case CL_ENGINE_TIME_LIMIT:
             return engine->time_limit;
 	case CL_ENGINE_PCRE_MATCH_LIMIT:
@@ -778,8 +784,7 @@ struct cl_settings *cl_engine_settings_copy(const struct cl_engine *engine)
 
     settings = (struct cl_settings *) malloc(sizeof(struct cl_settings));
     if(!settings) {
-        cli_errmsg("cl_engine_settings_copy: Unable to allocate memory for settings %llu\n",
-                   (long long unsigned)sizeof(struct cl_settings));
+        cli_errmsg("cl_engine_settings_copy: Unable to allocate memory for settings %u\n", sizeof(struct cl_settings));
         return NULL;
     }
 
@@ -799,6 +804,8 @@ struct cl_settings *cl_engine_settings_copy(const struct cl_engine *engine)
     settings->maxziptypercg = engine->maxziptypercg;
     settings->min_cc_count = engine->min_cc_count;
     settings->min_ssn_count = engine->min_ssn_count;
+    settings->min_mail_count = engine->min_mail_count;
+    settings->min_phone_count = engine->min_phone_count;
     settings->bytecode_security = engine->bytecode_security;
     settings->bytecode_timeout = engine->bytecode_timeout;
     settings->bytecode_mode = engine->bytecode_mode;
@@ -827,7 +834,6 @@ struct cl_settings *cl_engine_settings_copy(const struct cl_engine *engine)
     settings->maxpartitions = engine->maxpartitions;
 
     settings->maxiconspe = engine->maxiconspe;
-    settings->maxrechwp3 = engine->maxrechwp3;
 
     settings->pcre_match_limit = engine->pcre_match_limit;
     settings->pcre_recmatch_limit = engine->pcre_recmatch_limit;
@@ -853,6 +859,8 @@ int cl_engine_settings_apply(struct cl_engine *engine, const struct cl_settings 
     engine->maxziptypercg = settings->maxziptypercg;
     engine->min_cc_count = settings->min_cc_count;
     engine->min_ssn_count = settings->min_ssn_count;
+    engine->min_mail_count = settings->min_mail_count;
+    engine->min_phone_count = settings->min_phone_count;
     engine->bytecode_security = settings->bytecode_security;
     engine->bytecode_timeout = settings->bytecode_timeout;
     engine->bytecode_mode = settings->bytecode_mode;
@@ -900,7 +908,6 @@ int cl_engine_settings_apply(struct cl_engine *engine, const struct cl_settings 
     engine->maxpartitions = settings->maxpartitions;
 
     engine->maxiconspe = settings->maxiconspe;
-    engine->maxrechwp3 = settings->maxrechwp3;
 
     engine->pcre_match_limit = settings->pcre_match_limit;
     engine->pcre_recmatch_limit = settings->pcre_recmatch_limit;
@@ -1217,7 +1224,7 @@ int cli_rmdirs(const char *dirname)
 		    if(strcmp(dent->d_name, ".") && strcmp(dent->d_name, "..")) {
 			path = cli_malloc(strlen(dirname) + strlen(dent->d_name) + 2);
 			if(!path) {
-                cli_errmsg("cli_rmdirs: Unable to allocate memory for path %llu\n", (long long unsigned)(strlen(dirname) + strlen(dent->d_name) + 2));
+                cli_errmsg("cli_rmdirs: Unable to allocate memory for path %lu\n", strlen(dirname) + strlen(dent->d_name) + 2);
 			    closedir(dd);
 			    return -1;
 			}
@@ -1289,7 +1296,7 @@ bitset_t *cli_bitset_init(void)
 	
 	bs = cli_malloc(sizeof(bitset_t));
 	if (!bs) {
-        cli_errmsg("cli_bitset_init: Unable to allocate memory for bs %llu\n", (long long unsigned)sizeof(bitset_t));
+        cli_errmsg("cli_bitset_init: Unable to allocate memory for bs %u\n", sizeof(bitset_t));
 		return NULL;
 	}
 	bs->length = BITSET_DEFAULT_SIZE;

@@ -27,9 +27,13 @@
 struct scth_thrarg {
 	int options;
 	const struct optstruct *opts;
-	char *pathname;
+	const char *pathname;
 };
 
+static void onas_scth_handle_dir(const char *pathname);
+static void onas_scth_handle_file(const char *pathname);
+
 void *onas_scan_th(void *arg);
+static void onas_scth_exit(int sig);
 
 #endif

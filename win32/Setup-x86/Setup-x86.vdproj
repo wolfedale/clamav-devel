@@ -147,6 +147,8 @@
         }
         "Entry"
         {
+        "MsmKey" = "8:_91F263F0007543C29A463E6AE7767B6F"
+        "OwnerKey" = "8:_86FBE3D4BB5F42609082FB54D8079705"
         "MsmKey" = "8:_64B5C4E9452F43349FB4D53DEE15C87D"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
@@ -796,8 +798,8 @@
         {
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:ClamAV"
-        "ProductCode" = "8:{E068B85A-E686-49B2-9497-861DB982C731}"
-        "PackageCode" = "8:{FAA71BF3-81B0-4243-96F3-361D642E8B1D}"
+        "ProductCode" = "8:{681CC6D4-C47B-4651-BAAE-8DEF5731ED6E}"
+        "PackageCode" = "8:{A3B3D00F-08C0-4A79-B08A-E2CCB934A0F3}"
         "UpgradeCode" = "8:{B65ED295-87F7-4870-8017-E3A594DDADF8}"
         "AspNetVersion" = "8:4.0.30319.0"
         "RestartWWWService" = "11:FALSE"

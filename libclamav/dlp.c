@@ -302,6 +302,83 @@ int dlp_has_cc(const unsigned char *buffer, int length)
     return contains_cc(buffer, length, DETECT_MODE_DETECT);
 }
 
+static int contains_mail(const unsigned char *buffer, int length, int detmode)
+{
+    char buf[length+1];
+    char *pch;
+    int count = 0;
+    char *foundAT;
+    char *foundDOT;
+
+    strncpy(buf, buffer, length);
+    buf[length] = '\0';
+
+    pch = strtok (buf," \n");
+
+    while (pch != NULL)
+    {
+        foundAT = strchr(pch, '@');
+        foundDOT =   strchr(pch, '.');
+        if (foundAT && foundDOT) {
+            count++;
+        }
+        pch = strtok (NULL, " \n");
+    }
+
+    return count;
+}
+
+int dlp_get_mail_count(const unsigned char *buffer, int length)
+{
+    return contains_mail(buffer, length, DETECT_MODE_COUNT);
+}
+
+int dlp_has_mail(const unsigned char *buffer, int length)
+{
+    return contains_mail(buffer, length, DETECT_MODE_DETECT);
+}
+
+static int contains_phone(const unsigned char *buffer, int length, int detmode)
+{
+    char buf[length+1];
+    char *pch;
+    int count = 0;
+    char *source;
+    int i;
+
+    strncpy(buf, buffer, length);
+    buf[length] = '\0';
+    pch = strtok (buf," \n");
+
+    while (pch != NULL)
+    {
+        source = pch;
+        for (i = 0; i < strlen(source); i++) {
+            if (isdigit(source[i]) && isdigit(source[i+1])) { 
+                if (isdigit(source[i+2]) && isdigit(source[i+3])) {
+                    if (isdigit(source[i+4]) && isdigit(source[i+5])) {
+                        count++;
+                    }
+                }
+            }
+        }
+        pch = strtok (NULL, " \n");
+    }
+
+    return count;
+}
+
+int dlp_get_phone_count(const unsigned char *buffer, int length)
+{
+    return contains_phone(buffer, length, DETECT_MODE_COUNT);
+}
+
+int dlp_has_phone(const unsigned char *buffer, int length)
+{
+    return contains_phone(buffer, length, DETECT_MODE_DETECT);
+}
+
+
 int dlp_is_valid_ssn(const unsigned char *buffer, int length, int format)
 {
     int area_number;

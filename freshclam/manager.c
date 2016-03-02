@@ -930,7 +930,7 @@ getfile_mirman (const char *srcfile, const char *destfile,
             percentage = (int) (100 * (float) totaldownloaded / totalsize);
 
 #ifdef HAVE_UNISTD_H
-        if (!mprintf_quiet && (mprintf_progress || isatty(fileno(stdout))))
+        if (!mprintf_quiet && isatty(fileno(stdout)))
 #else
         if (!mprintf_quiet)
 #endif
@@ -2171,8 +2171,7 @@ updatedb (const char *dbname, const char *hostname, char *ip, int *signo,
         logg ("^Your ClamAV installation is OUTDATED!\n");
         logg ("^Current functionality level = %d, recommended = %d\n", flevel,
               current->fl);
-        logg ("DON'T PANIC! Read http://www.clamav.net/documents/upgrading-clamav\n");
-
+        logg ("DON'T PANIC! Read http://www.clamav.net/support/faq\n");
     }
 
     *signo += current->sigs;
@@ -2205,8 +2204,8 @@ updatecustomdb (const char *url, int *signo, const struct optstruct *opts,
 
     if (strlen (url) > sizeof (urlcpy) - 1)
     {
-        logg ("!DatabaseCustomURL: URL must be shorter than %llu\n",
-              (long long unsigned)sizeof (urlcpy));
+        logg ("!DatabaseCustomURL: URL must be shorter than %lu\n",
+              sizeof (urlcpy));
         return FCE_FAILEDUPDATE;
     }
 
@@ -2492,7 +2491,7 @@ downloadmanager (const struct optstruct *opts, const char *hostname,
                         {
                             logg ("^Your ClamAV installation is OUTDATED!\n");
                             logg ("^Local version: %s Recommended version: %s\n", vstr, newver);
-                            logg ("DON'T PANIC! Read http://www.clamav.net/documents/upgrading-clamav\n");
+                            logg ("DON'T PANIC! Read http://www.clamav.net/support/faq\n");
                             outdated = 1;
                         }
                     }

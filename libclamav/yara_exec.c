@@ -184,7 +184,7 @@ int yr_execute_code(
 #endif
 
       case OP_PUSH:
-        memcpy(&r1, ip + 1, sizeof(uint64_t));
+        r1 = *(uint64_t*)(ip + 1);
         ip += sizeof(uint64_t);
         push(r1);
         break;
@@ -194,38 +194,38 @@ int yr_execute_code(
         break;
 
       case OP_CLEAR_M:
-        memcpy(&r1, ip + 1, sizeof(uint64_t));
+        r1 = *(uint64_t*)(ip + 1);
         ip += sizeof(uint64_t);
         mem[r1] = 0;
         break;
 
       case OP_ADD_M:
-        memcpy(&r1, ip + 1, sizeof(uint64_t));
+        r1 = *(uint64_t*)(ip + 1);
         ip += sizeof(uint64_t);
         pop(r2);
         mem[r1] += r2;
         break;
 
       case OP_INCR_M:
-        memcpy(&r1, ip + 1, sizeof(uint64_t));
+        r1 = *(uint64_t*)(ip + 1);
         ip += sizeof(uint64_t);
         mem[r1]++;
         break;
 
       case OP_PUSH_M:
-        memcpy(&r1, ip + 1, sizeof(uint64_t));
+        r1 = *(uint64_t*)(ip + 1);
         ip += sizeof(uint64_t);
         push(mem[r1]);
         break;
 
       case OP_POP_M:
-        memcpy(&r1, ip + 1, sizeof(uint64_t));
+        r1 = *(uint64_t*)(ip + 1);
         ip += sizeof(uint64_t);
         pop(mem[r1]);
         break;
 
       case OP_SWAPUNDEF:
-        memcpy(&r1, ip + 1, sizeof(uint64_t));
+        r1 = *(uint64_t*)(ip + 1);
         ip += sizeof(uint64_t);
         pop(r2);
         if (r2 != UNDEFINED)
@@ -540,7 +540,7 @@ int yr_execute_code(
 
         // r1 = number of arguments
 
-        memcpy(&r1, ip + 1, sizeof(uint64_t));
+        r1 = *(uint64_t*)(ip + 1);
         ip += sizeof(uint64_t);
 
         // pop arguments from stack and copy them to args array
@@ -854,7 +854,7 @@ int yr_execute_code(
 
 #if REAL_YARA //not supported ClamAV
       case OP_IMPORT:
-        memcpy(&r1, ip + 1, sizeof(uint64_t));
+        r1 = *(uint64_t*)(ip + 1);
         ip += sizeof(uint64_t);
 
         FAIL_ON_ERROR(yr_modules_load(

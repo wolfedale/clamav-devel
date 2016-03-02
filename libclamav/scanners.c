@@ -107,7 +107,6 @@
 #include "json_api.h"
 #include "msxml.h"
 #include "tiff.h"
-#include "hwp.h"
 
 #ifdef HAVE_BZLIB_H
 #include <bzlib.h>
@@ -1927,11 +1926,15 @@ static int cli_scan_structured(cli_ctx *ctx)
 	int result = 0;
 	unsigned int cc_count = 0;
 	unsigned int ssn_count = 0;
+        unsigned int mail_count = 0;
+        unsigned int phone_count = 0;
 	int done = 0;
 	fmap_t *map;
 	size_t pos = 0;
 	int (*ccfunc)(const unsigned char *buffer, int length);
 	int (*ssnfunc)(const unsigned char *buffer, int length);
+        int (*mailfunc)(const unsigned char *buffer, int length);
+        int (*phonefunc)(const unsigned char *buffer, int length);
 	unsigned int viruses_found = 0;
 
     if(ctx == NULL)
@@ -1943,6 +1946,16 @@ static int cli_scan_structured(cli_ctx *ctx)
 	ccfunc = dlp_has_cc;
     else
 	ccfunc = dlp_get_cc_count;
+
+    if(ctx->engine->min_mail_count == 1)
+        mailfunc = dlp_has_mail;
+    else
+        mailfunc = dlp_get_mail_count;
+
+    if(ctx->engine->min_phone_count == 1)
+        phonefunc = dlp_has_phone;
+    else
+        phonefunc = dlp_get_phone_count;
 
     switch((ctx->options & CL_SCAN_STRUCTURED_SSN_NORMAL) | (ctx->options & CL_SCAN_STRUCTURED_SSN_STRIPPED)) {
 
@@ -1976,6 +1989,12 @@ static int cli_scan_structured(cli_ctx *ctx)
 	if((cc_count += ccfunc((const unsigned char *)buf, result)) >= ctx->engine->min_cc_count)
 	    done = 1;
 
+        if((mail_count += mailfunc((const unsigned char *)buf, result)) >= ctx->engine->min_mail_count)
+            done = 1;
+
+        if((phone_count += phonefunc((const unsigned char *)buf, result)) >= ctx->engine->min_phone_count)
+            done = 1;
+
 	if(ssnfunc && ((ssn_count += ssnfunc((const unsigned char *)buf, result)) >= ctx->engine->min_ssn_count))
 	    done = 1;
     }
@@ -1987,6 +2006,24 @@ static int cli_scan_structured(cli_ctx *ctx)
 	    viruses_found++;
 	else
 	    return CL_VIRUS;
+    }
+
+    if(mail_count != 0 && mail_count >= ctx->engine->min_mail_count) {
+        cli_dbgmsg("cli_scan_structured: %u mail detected\n", mail_count);
+        cli_append_virus(ctx,"Heuristics.Structured.Mail");
+        if (SCAN_ALL)
+            viruses_found++;
+        else
+            return CL_VIRUS;
+    }
+
+    if(phone_count != 0 && phone_count >= ctx->engine->min_phone_count) {
+        cli_dbgmsg("cli_scan_structured: %u phone detected\n", cc_count);
+        cli_append_virus(ctx,"Heuristics.Structured.PhoneNumber");
+        if (SCAN_ALL)
+            viruses_found++;
+        else
+            return CL_VIRUS;
     }
 
     if(ssn_count != 0 && ssn_count >= ctx->engine->min_ssn_count) {
@@ -2267,28 +2304,13 @@ static int cli_scanraw(cli_ctx *ctx, cli_file_t type, uint8_t typercg, cli_file_
         while(fpt) {
             if(fpt->offset) switch(fpt->type) {
                 case CL_TYPE_XDP:
-                    if(SCAN_PDF && (DCONF_DOC & DOC_CONF_PDF)) {
-                        cli_dbgmsg("XDP signature found at %u\n", (unsigned int) fpt->offset);
-                        ret = cli_scanxdp(ctx);
-                    }
+                    ret = cli_scanxdp(ctx);
                     break;
                 case CL_TYPE_XML_WORD:
-                    if(SCAN_XMLDOCS && (DCONF_DOC & DOC_CONF_MSXML)) {
-                        cli_dbgmsg("XML-WORD signature found at %u\n", (unsigned int) fpt->offset);
-                        ret = cli_scanmsxml(ctx);
-                    }
+                    ret = cli_scanmsxml(ctx);
                     break;
                 case CL_TYPE_XML_XL:
-                    if(SCAN_XMLDOCS && (DCONF_DOC & DOC_CONF_MSXML)) {
-                        cli_dbgmsg("XML-XL signature found at %u\n", (unsigned int) fpt->offset);
-                        ret = cli_scanmsxml(ctx);
-                    }
-                    break;
-                case CL_TYPE_XML_HWP:
-                    if(SCAN_XMLDOCS && (DCONF_DOC & DOC_CONF_HWP)) {
-                        cli_dbgmsg("XML-HWP signature found at %u\n", (unsigned int) fpt->offset);
-                        ret = cli_scanhwpml(ctx);
-                    }
+                    ret = cli_scanmsxml(ctx);
                     break;
                 case CL_TYPE_RARSFX:
                     if(type != CL_TYPE_RAR && have_rar && SCAN_ARCHIVE && (DCONF_ARCH & ARCH_CONF_RAR)) {
@@ -2399,24 +2421,24 @@ static int cli_scanraw(cli_ctx *ctx, cli_file_t type, uint8_t typercg, cli_file_
                 case CL_TYPE_DMG:
                     if(SCAN_ARCHIVE && (DCONF_ARCH & ARCH_CONF_DMG)) {
                         ctx->container_type = CL_TYPE_DMG;
-                        cli_dbgmsg("DMG signature found at %u\n", (unsigned int) fpt->offset);
                         nret = cli_scandmg(ctx);
+                        cli_dbgmsg("DMG signature found at %u\n", (unsigned int) fpt->offset);
                     }
                     break;
 
                 case CL_TYPE_MBR:
-                    if(SCAN_ARCHIVE) {
+                    {
                         int iret = cli_mbr_check2(ctx, 0);
-                        if ((iret == CL_TYPE_GPT) && (DCONF_ARCH & ARCH_CONF_GPT)) {
+                        if (iret == CL_TYPE_GPT) {
                             cli_dbgmsg("Recognized GUID Partition Table file\n");
                             ctx->container_type = CL_TYPE_GPT;
-                            cli_dbgmsg("GPT signature found at %u\n", (unsigned int) fpt->offset);
                             nret = cli_scangpt(ctx, 0);
+                            cli_dbgmsg("GPT signature found at %u\n", (unsigned int) fpt->offset);
                         }
-                        else if ((iret == CL_CLEAN) && (DCONF_ARCH & ARCH_CONF_MBR)) {
+                        else if (iret == CL_CLEAN) {
                             ctx->container_type = CL_TYPE_MBR;
-                            cli_dbgmsg("MBR signature found at %u\n", (unsigned int) fpt->offset);
                             nret = cli_scanmbr(ctx, 0);
+                            cli_dbgmsg("MBR signature found at %u\n", (unsigned int) fpt->offset);
                         }
                     }
                     break;
@@ -2695,11 +2717,7 @@ static int magic_scandesc(cli_ctx *ctx, cli_file_t type)
                 type == CL_TYPE_OOXML_PPT ||
                 type == CL_TYPE_OOXML_XL ||
                 type == CL_TYPE_XML_WORD ||
-                type == CL_TYPE_XML_XL ||
-                type == CL_TYPE_HWP3 ||
-                type == CL_TYPE_XML_HWP ||
-                type == CL_TYPE_HWPOLE2 ||
-                type == CL_TYPE_OOXML_HWP) {
+                type == CL_TYPE_XML_XL) {
                 ctx->properties = json_object_new_object();
                 if (NULL == ctx->properties) {
                     cli_errmsg("magic_scandesc: no memory for json properties object\n");
@@ -2857,35 +2875,17 @@ static int magic_scandesc(cli_ctx *ctx, cli_file_t type)
 	case CL_TYPE_IGNORED:
 	    break;
 
-	case CL_TYPE_HWP3:
-	    if(SCAN_HWP3 && (DCONF_DOC & DOC_CONF_HWP))
-		ret = cli_scanhwp3(ctx);
-	    break;
+    case CL_TYPE_XML_WORD:
+        ret = cli_scanmsxml(ctx);
+        break;
 
-	case CL_TYPE_HWPOLE2:
-	    if(SCAN_OLE2 && (DCONF_ARCH & ARCH_CONF_OLE2))
-		ret = cli_scanhwpole2(ctx);
-	    break;
+    case CL_TYPE_XML_XL:
+        ret = cli_scanmsxml(ctx);
+        break;
 
-	case CL_TYPE_XML_WORD:
-	    if(SCAN_XMLDOCS && (DCONF_DOC & DOC_CONF_MSXML))
-		ret = cli_scanmsxml(ctx);
-	    break;
-
-	case CL_TYPE_XML_XL:
-	    if(SCAN_XMLDOCS && (DCONF_DOC & DOC_CONF_MSXML))
-		ret = cli_scanmsxml(ctx);
-	    break;
-
-	case CL_TYPE_XML_HWP:
-	    if(SCAN_XMLDOCS && (DCONF_DOC & DOC_CONF_HWP))
-		ret = cli_scanhwpml(ctx);
-	    break;
-
-	case CL_TYPE_XDP:
-	    if(SCAN_PDF && (DCONF_DOC & DOC_CONF_PDF))
-		ret = cli_scanxdp(ctx);
-	    break;
+    case CL_TYPE_XDP:
+        ret = cli_scanxdp(ctx);
+        break;
 
 	case CL_TYPE_RAR:
 	    ctx->container_type = CL_TYPE_RAR;
@@ -2909,29 +2909,22 @@ static int magic_scandesc(cli_ctx *ctx, cli_file_t type)
 	    }
 	    break;
 
-	case CL_TYPE_OOXML_WORD:
-	case CL_TYPE_OOXML_PPT:
-	case CL_TYPE_OOXML_XL:
-	case CL_TYPE_OOXML_HWP:
+        case CL_TYPE_OOXML_WORD:
+        case CL_TYPE_OOXML_PPT:
+        case CL_TYPE_OOXML_XL:
 #if HAVE_JSON
-	    if(SCAN_XMLDOCS && (DCONF_DOC & DOC_CONF_OOXML)) {
-		if ((ctx->options & CL_SCAN_FILE_PROPERTIES) && (ctx->wrkproperty != NULL)) {
-		    ret = cli_process_ooxml(ctx, type);
-
-		    if (ret == CL_EMEM || ret == CL_ENULLARG) {
-			/* critical error */
-			break;
-		    } else if (ret != CL_SUCCESS) {
-			/*
-			 * non-critical return => allow for the CL_TYPE_ZIP scan to occur
-			 * cli_process_ooxml other possible returns:
-			 *   CL_ETIMEOUT, CL_EMAXSIZE, CL_EMAXFILES, CL_EPARSE,
-			 *   CL_EFORMAT, CL_BREAK, CL_ESTAT
-			 */
-			ret = CL_SUCCESS;
-		    }
-		}
-	    }
+            if ((ctx->options & CL_SCAN_FILE_PROPERTIES) && (ctx->wrkproperty != NULL)) {
+                ret = cli_process_ooxml(ctx);
+                if (ret == CL_EMEM || ret == CL_ENULLARG) {
+                    /* critical error */
+                    break;
+                }
+                else if (ret != CL_SUCCESS) {
+                    /* allow for the CL_TYPE_ZIP scan to occur; cli_process_ooxml other possible returns: */
+                    /* CL_ETIMEOUT, CL_EMAXSIZE, CL_EMAXFILES, CL_EPARSE, CL_EFORMAT, CL_BREAK, CL_ESTAT  */
+                    ret = CL_SUCCESS;
+                }
+            }
 #endif
 	case CL_TYPE_ZIP:
 	    ctx->container_type = CL_TYPE_ZIP;
@@ -2955,13 +2948,11 @@ static int magic_scandesc(cli_ctx *ctx, cli_file_t type)
 	    break;
 
 	case CL_TYPE_GPT:
-	    if(SCAN_ARCHIVE && (DCONF_ARCH & ARCH_CONF_GPT))
-		ret = cli_scangpt(ctx, 0);
+	    ret = cli_scangpt(ctx, 0);
 	    break;
 
 	case CL_TYPE_APM:
-	    if(SCAN_ARCHIVE && (DCONF_ARCH & ARCH_CONF_APM))
-		ret = cli_scanapm(ctx);
+	    ret = cli_scanapm(ctx);
 	    break;
 
 	case CL_TYPE_ARJ:
@@ -3206,7 +3197,7 @@ static int magic_scandesc(cli_ctx *ctx, cli_file_t type)
     }
 
     /* CL_TYPE_HTML: raw HTML files are not scanned, unless safety measure activated via DCONF */
-    if(type != CL_TYPE_IGNORED && (type != CL_TYPE_HTML || !(SCAN_HTML) || !(DCONF_DOC & DOC_CONF_HTML_SKIPRAW)) && !ctx->engine->sdb) {
+    if(type != CL_TYPE_IGNORED && (type != CL_TYPE_HTML || !(DCONF_DOC & DOC_CONF_HTML_SKIPRAW)) && !ctx->engine->sdb) {
 	res = cli_scanraw(ctx, type, typercg, &dettype, (ctx->engine->engine_options & ENGINE_OPTIONS_DISABLE_CACHE) ? NULL : hash);
 	if(res != CL_CLEAN) {
 	    switch(res) {

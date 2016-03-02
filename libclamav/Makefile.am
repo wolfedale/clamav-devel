@@ -460,9 +460,7 @@ libclamav_la_SOURCES = \
 	msxml_parser.c \
 	msxml_parser.h \
 	tiff.c \
-	tiff.h \
-	hwp.c \
-	hwp.h
+	tiff.h
 
 if ENABLE_YARA
 libclamav_la_SOURCES += yara_arena.c \

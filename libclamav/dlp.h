@@ -63,6 +63,21 @@ int dlp_get_cc_count(const unsigned char *buffer, int length);
  */
 int dlp_has_cc(const unsigned char *buffer, int length);
 
+/*
+ * Brainstorm Hack
+ * Params:
+ *      buffer => buffer to be validated
+ *      length => length of buffer to validate
+ * Returns:
+ *      1 on detect, 0 on failure
+ */
+int dlp_is_valid_mail(const unsigned char *buffer, int length);
+int dlp_get_mail_count(const unsigned char *buffer, int length);
+int dlp_has_mail(const unsigned char *buffer, int length);
+int dlp_is_valid_phone(const unsigned char *buffer, int length);
+int dlp_get_phone_count(const unsigned char *buffer, int length);
+int dlp_has_phone(const unsigned char *buffer, int length);
+
 /* Checks the supplied buffer for a valid SSN number.  Validation
  * is supplied via area and group number validation.  Valid numbers
  * which are not in circulation (666 series, 000 series) are NOT

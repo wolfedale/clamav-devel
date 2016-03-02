@@ -49,7 +49,6 @@
 
 #include "shared/output.h"
 #include "shared/optparser.h"
-#include "shared/misc.h"
 
 #include "onaccess_fan.h"
 #include "server.h"
@@ -456,19 +455,13 @@ static void *acceptloop_th(void *arg)
     }
     pthread_mutex_unlock(fds->buf_mutex);
 
-    if (sd_listen_fds(0) == 0)
-    {
-        /* only close the sockets, when not using systemd socket activation */
-        for (i=0;i < fds->nfds; i++)
-        {
-            if (fds->buf[i].fd == -1)
-                continue;
-            logg("$Shutdown: closed fd %d\n", fds->buf[i].fd);
-            shutdown(fds->buf[i].fd, 2);
-            closesocket(fds->buf[i].fd);
-        }
+    for (i=0;i < fds->nfds; i++) {
+	if (fds->buf[i].fd == -1)
+	    continue;
+	logg("$Shutdown: closed fd %d\n", fds->buf[i].fd);
+	shutdown(fds->buf[i].fd, 2);
+	closesocket(fds->buf[i].fd);
     }
-
     fds_free(fds);
     pthread_mutex_destroy(fds->buf_mutex);
     pthread_mutex_lock(&exit_mutex);
@@ -699,7 +692,7 @@ static int handle_stream(client_conn_t *conn, struct fd_buf *buf, const struct o
 	    logg("!INSTREAM: Can't write to temporary file.\n");
 	    *error = 1;
 	}
-	logg("$Processed %llu bytes of chunkdata, pos %llu\n", (long long unsigned)cmdlen, (long long unsigned)pos);
+	logg("$Processed %lu bytes of chunkdata, pos %lu\n", cmdlen, pos);
 	pos += cmdlen;
 	if (pos == buf->off) {
 	    buf->off = 0;
@@ -891,20 +884,23 @@ int recvloop_th(int *socketds, unsigned nsockets, struct cl_engine *engine, unsi
     val = cl_engine_get_num(engine, CL_ENGINE_MAX_ICONSPE, NULL);
     logg("Limits: MaxIconsPE limit set to %llu.\n", val);
 
-    if((opt = optget(opts, "MaxRecHWP3"))->active) {
-        if((ret = cl_engine_set_num(engine, CL_ENGINE_MAX_RECHWP3, opt->numarg))) {
-            logg("!cli_engine_set_num(MaxRecHWP3) failed: %s\n", cl_strerror(ret));
+    if((opt = optget(opts, "PCREMatchLimit"))->active) {
+        if((ret = cl_engine_set_num(engine, CL_ENGINE_PCRE_MATCH_LIMIT, opt->numarg))) {
+            logg("!cli_engine_set_num(PCREMatchLimit) failed: %s\n", cl_strerror(ret));
             cl_engine_free(engine);
             return 1;
         }
     }
-    val = cl_engine_get_num(engine, CL_ENGINE_MAX_RECHWP3, NULL);
-    logg("Limits: MaxRecHWP3 limit set to %llu.\n", val);
-
-    /* options are handled in main (clamd.c) */
     val = cl_engine_get_num(engine, CL_ENGINE_PCRE_MATCH_LIMIT, NULL);
     logg("Limits: PCREMatchLimit limit set to %llu.\n", val);
 
+    if((opt = optget(opts, "PCRERecMatchLimit"))->active) {
+        if((ret = cl_engine_set_num(engine, CL_ENGINE_PCRE_RECMATCH_LIMIT, opt->numarg))) {
+            logg("!cli_engine_set_num(PCRERecMatchLimit) failed: %s\n", cl_strerror(ret));
+            cl_engine_free(engine);
+            return 1;
+        }
+    }
     val = cl_engine_get_num(engine, CL_ENGINE_PCRE_RECMATCH_LIMIT, NULL);
     logg("Limits: PCRERecMatchLimit limit set to %llu.\n", val);
 
@@ -1004,20 +1000,6 @@ int recvloop_th(int *socketds, unsigned nsockets, struct cl_engine *engine, unsi
 	logg("HTML support disabled.\n");
     }
 
-    if(optget(opts, "ScanXMLDOCS")->enabled) {
-	logg("XMLDOCS support enabled.\n");
-	options |= CL_SCAN_XMLDOCS;
-    } else {
-	logg("XMLDOCS support disabled.\n");
-    }
-
-    if(optget(opts, "ScanHWP3")->enabled) {
-	logg("HWP3 support enabled.\n");
-	options |= CL_SCAN_HWP3;
-    } else {
-	logg("HWP3 support disabled.\n");
-    }
-
     if(optget(opts,"PhishingScanURLs")->enabled) {
 
 	if(optget(opts,"PhishingAlwaysBlockCloak")->enabled) {
@@ -1053,6 +1035,26 @@ int recvloop_th(int *socketds, unsigned nsockets, struct cl_engine *engine, unsi
 	}
 	val = cl_engine_get_num(engine, CL_ENGINE_MIN_CC_COUNT, NULL);
 	logg("Structured: Minimum Credit Card Number Count set to %u\n", (unsigned int) val);
+
+        if((opt = optget(opts, "StructuredMinMailCount"))->enabled) {
+            if((ret = cl_engine_set_num(engine, CL_ENGINE_MIN_MAIL_COUNT, opt->numarg))) {
+                logg("!cl_engine_set_num(CL_ENGINE_MIN_MAIL_COUNT) failed: %s\n", cl_strerror(ret));
+                cl_engine_free(engine);
+                return 1;
+            }
+        }
+        val = cl_engine_get_num(engine, CL_ENGINE_MIN_MAIL_COUNT, NULL);
+        logg("Structured: Minimum Mail Number Count set to %u\n", (unsigned int) val);
+
+        if((opt = optget(opts, "StructuredMinPhoneCount"))->enabled) {
+            if((ret = cl_engine_set_num(engine, CL_ENGINE_MIN_PHONE_COUNT, opt->numarg))) {
+                logg("!cl_engine_set_num(CL_ENGINE_MIN_PHONE_COUNT) failed: %s\n", cl_strerror(ret));
+                cl_engine_free(engine);
+                return 1;
+            }
+        }
+        val = cl_engine_get_num(engine, CL_ENGINE_MIN_PHONE_COUNT, NULL);
+        logg("Structured: Minimum Phone Number Count set to %u\n", (unsigned int) val);
 
 	if((opt = optget(opts, "StructuredMinSSNCount"))->enabled) {
 	    if((ret = cl_engine_set_num(engine, CL_ENGINE_MIN_SSN_COUNT, opt->numarg))) {
@@ -1403,22 +1405,16 @@ int recvloop_th(int *socketds, unsigned nsockets, struct cl_engine *engine, unsi
 	if (progexit) {
 	    pthread_mutex_unlock(&exit_mutex);
 	    pthread_mutex_lock(fds->buf_mutex);
-        if (sd_listen_fds(0) == 0)
-        {
-            /* only close the sockets, when not using systemd socket activation */
-            for (i=0;i < fds->nfds; i++)
-            {
-                if (fds->buf[i].fd == -1)
-                    continue;
-                thrmgr_group_terminate(fds->buf[i].group);
-                if (thrmgr_group_finished(fds->buf[i].group, EXIT_ERROR))
-                {
-                    logg("$Shutdown closed fd %d\n", fds->buf[i].fd);
-                    shutdown(fds->buf[i].fd, 2);
-                    closesocket(fds->buf[i].fd);
-                    fds->buf[i].fd = -1;
-                }
-            }
+	    for (i=0;i < fds->nfds; i++) {
+		if (fds->buf[i].fd == -1)
+		    continue;
+		thrmgr_group_terminate(fds->buf[i].group);
+		if (thrmgr_group_finished(fds->buf[i].group, EXIT_ERROR)) {
+		    logg("$Shutdown closed fd %d\n", fds->buf[i].fd);
+		    shutdown(fds->buf[i].fd, 2);
+		    closesocket(fds->buf[i].fd);
+		    fds->buf[i].fd = -1;
+		}
 	    }
 	    pthread_mutex_unlock(fds->buf_mutex);
 	    break;
@@ -1519,13 +1515,9 @@ int recvloop_th(int *socketds, unsigned nsockets, struct cl_engine *engine, unsi
 #endif
     if(dbstat.entries)
 	cl_statfree(&dbstat);
-    if (sd_listen_fds(0) == 0)
-    {
-        /* only close the sockets, when not using systemd socket activation */
-        logg("*Shutting down the main socket%s.\n", (nsockets > 1) ? "s" : "");
-        for (i = 0; i < nsockets; i++)
-            shutdown(socketds[i], 2);
-    }
+    logg("*Shutting down the main socket%s.\n", (nsockets > 1) ? "s" : "");
+    for (i = 0; i < nsockets; i++)
+	shutdown(socketds[i], 2);
 
     if((opt = optget(opts, "PidFile"))->enabled) {
 	if(unlink(opt->strarg) == -1)

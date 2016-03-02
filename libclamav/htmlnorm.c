@@ -584,10 +584,8 @@ static void screnc_decode(unsigned char *ptr, struct screnc_state *s)
 		} else {
 			*dst++ = *ptr++;
 			*dst++ = *ptr;
-			if (!*ptr) {
-				dst--;
+			if (!*ptr)
 				break;
-			}
 		}
 		ptr++;
 		s->length--;
