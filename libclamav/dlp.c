@@ -343,8 +343,8 @@ static int contains_phone(const unsigned char *buffer, int length, int detmode)
     char buf[length+1];
     char *pch;
     int count = 0;
-    char *source;
     int i;
+    int x;
 
     strncpy(buf, buffer, length);
     buf[length] = '\0';
@@ -352,19 +352,22 @@ static int contains_phone(const unsigned char *buffer, int length, int detmode)
 
     while (pch != NULL)
     {
-        source = pch;
-        for (i = 0; i < strlen(source); i++) {
-            if (isdigit(source[i]) && isdigit(source[i+1])) { 
-                if (isdigit(source[i+2]) && isdigit(source[i+3])) {
-                    if (isdigit(source[i+4]) && isdigit(source[i+5])) {
-                        count++;
-                    }
+        for (i = 0; i < strlen(pch); i++) {
+            printf("%C\n", pch[i]);
+            if (isdigit(pch[i])){
+                x = 1;
+                while(isdigit(pch[i+x])) {
+                    x++;
+                }
+                if (x > 6) {
+                    count ++;
+                    i = i + x;
                 }
             }
+
         }
         pch = strtok (NULL, " \n");
     }
-
     return count;
 }
 
