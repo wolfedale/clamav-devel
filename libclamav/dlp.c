@@ -1,4 +1,4 @@
-/* 
+/*
  *  Simple library to detect and validate SSN and Credit Card numbers.
  *
  *  Copyright (C) 2015 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
@@ -26,7 +26,7 @@
 #endif
 
 #include <stdio.h>
-#include <ctype.h>  
+#include <ctype.h>
 #include <string.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -51,7 +51,7 @@ my $i = <>;
 my $count = 0;
 while ($i =~ s/(\d{3}) (\d{2})//) {
     print int($2) .", ";
-    if ($count == 18) 
+    if ($count == 18)
     {
         print "\n";
         $count = 0;
@@ -67,54 +67,54 @@ while ($i =~ s/(\d{3}) (\d{2})//) {
   *
   */
 
-/* MAX_AREA is the maximum assigned area number.  This can be derived from 
- * the data in the highgroup.txt file by looking at the last area->group 
+/* MAX_AREA is the maximum assigned area number.  This can be derived from
+ * the data in the highgroup.txt file by looking at the last area->group
  * mapping from that file.
- */ 
+ */
 #define MAX_AREA 772
- 
+
 /* array of max group numbers for a given area number */
 /*
 static int ssn_max_group[MAX_AREA+1] = { 0,
-    6, 6, 4, 8, 8, 8, 6, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 
-    90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 88, 88, 88, 88, 72, 72, 72, 72, 
-    70, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 96, 96, 96, 96, 96, 96, 96, 96, 
-    96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 
-    96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 
-    96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 
-    96, 96, 96, 96, 96, 96, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 
-    94, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 17, 17, 17, 17, 17, 17, 
-    17, 17, 17, 17, 17, 17, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 
-    84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 82, 82, 82, 82, 82, 82, 82, 82, 
-    82, 82, 82, 82, 82, 82, 82, 82, 82, 82, 82, 82, 82, 82, 82, 82, 82, 82, 82, 
-    82, 82, 79, 79, 79, 79, 79, 79, 79, 79, 77, 6, 4, 99, 99, 99, 99, 99, 99, 
-    99, 99, 99, 53, 53, 53, 53, 53, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 
-    99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 
-    99, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 
-    13, 13, 13, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 33, 33, 
-    31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 6, 6, 6, 6, 6, 6, 
-    6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 
-    6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 4, 4, 4, 4, 4, 4, 4, 4, 4, 
-    35, 35, 35, 35, 35, 35, 33, 33, 33, 33, 33, 33, 33, 33, 33, 33, 33, 33, 33, 
-    33, 33, 33, 33, 33, 33, 29, 29, 29, 29, 29, 29, 29, 29, 27, 27, 27, 27, 27, 
-    67, 67, 67, 67, 67, 67, 67, 67, 99, 99, 99, 99, 99, 99, 99, 99, 63, 61, 61, 
-    61, 61, 61, 61, 61, 61, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 
-    99, 99, 23, 23, 23, 23, 23, 23, 23, 21, 21, 99, 99, 99, 99, 99, 99, 99, 99, 
-    99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 51, 51, 51, 51, 49, 49, 49, 49, 
-    49, 49, 37, 37, 37, 37, 37, 37, 37, 37, 25, 25, 25, 25, 25, 25, 25, 25, 25, 
-    25, 25, 25, 23, 23, 23, 33, 33, 41, 39, 53, 51, 51, 51, 27, 27, 27, 27, 27, 
-    27, 27, 45, 43, 79, 77, 55, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 63, 63, 
-    63, 61, 61, 61, 61, 61, 61, 75, 73, 73, 73, 73, 99, 99, 99, 99, 99, 99, 99, 
-    99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 
-    99, 99, 99, 51, 99, 99, 45, 45, 43, 37, 99, 99, 99, 99, 99, 61, 99, 3, 99, 
-    99, 99, 99, 99, 99, 99, 84, 84, 84, 84, 99, 99, 67, 67, 65, 65, 65, 65, 65, 
-    65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 11, 
-    11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 96, 
-    96, 44, 44, 46, 46, 46, 44, 28, 26, 26, 26, 26, 16, 16, 16, 14, 14, 14, 14, 
-    36, 34, 34, 34, 34, 34, 34, 34, 34, 14, 14, 12, 12, 90, 14, 14, 14, 14, 12, 
-    12, 12, 12, 12, 12, 9, 9, 7, 7, 7, 7, 7, 7, 7, 18, 18, 18, 18, 18, 
-    18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 
-    28, 18, 18, 10, 14, 10, 10, 10, 10, 10, 9, 9, 3, 1, 5, 5, 5, 5, 5, 
+    6, 6, 4, 8, 8, 8, 6, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90,
+    90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 88, 88, 88, 88, 72, 72, 72, 72,
+    70, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 96, 96, 96, 96, 96, 96, 96, 96,
+    96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96,
+    96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96,
+    96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96, 96,
+    96, 96, 96, 96, 96, 96, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94, 94,
+    94, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 17, 17, 17, 17, 17, 17,
+    17, 17, 17, 17, 17, 17, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84,
+    84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 84, 82, 82, 82, 82, 82, 82, 82, 82,
+    82, 82, 82, 82, 82, 82, 82, 82, 82, 82, 82, 82, 82, 82, 82, 82, 82, 82, 82,
+    82, 82, 79, 79, 79, 79, 79, 79, 79, 79, 77, 6, 4, 99, 99, 99, 99, 99, 99,
+    99, 99, 99, 53, 53, 53, 53, 53, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,
+    99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,
+    99, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+    13, 13, 13, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 33, 33,
+    31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 6, 6, 6, 6, 6, 6,
+    6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+    6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+    35, 35, 35, 35, 35, 35, 33, 33, 33, 33, 33, 33, 33, 33, 33, 33, 33, 33, 33,
+    33, 33, 33, 33, 33, 33, 29, 29, 29, 29, 29, 29, 29, 29, 27, 27, 27, 27, 27,
+    67, 67, 67, 67, 67, 67, 67, 67, 99, 99, 99, 99, 99, 99, 99, 99, 63, 61, 61,
+    61, 61, 61, 61, 61, 61, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,
+    99, 99, 23, 23, 23, 23, 23, 23, 23, 21, 21, 99, 99, 99, 99, 99, 99, 99, 99,
+    99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 51, 51, 51, 51, 49, 49, 49, 49,
+    49, 49, 37, 37, 37, 37, 37, 37, 37, 37, 25, 25, 25, 25, 25, 25, 25, 25, 25,
+    25, 25, 25, 23, 23, 23, 33, 33, 41, 39, 53, 51, 51, 51, 27, 27, 27, 27, 27,
+    27, 27, 45, 43, 79, 77, 55, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 63, 63,
+    63, 61, 61, 61, 61, 61, 61, 75, 73, 73, 73, 73, 99, 99, 99, 99, 99, 99, 99,
+    99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,
+    99, 99, 99, 51, 99, 99, 45, 45, 43, 37, 99, 99, 99, 99, 99, 61, 99, 3, 99,
+    99, 99, 99, 99, 99, 99, 84, 84, 84, 84, 99, 99, 67, 67, 65, 65, 65, 65, 65,
+    65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 11,
+    11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 96,
+    96, 44, 44, 46, 46, 46, 44, 28, 26, 26, 26, 26, 16, 16, 16, 14, 14, 14, 14,
+    36, 34, 34, 34, 34, 34, 34, 34, 34, 14, 14, 12, 12, 90, 14, 14, 14, 14, 12,
+    12, 12, 12, 12, 12, 9, 9, 7, 7, 7, 7, 7, 7, 7, 18, 18, 18, 18, 18,
+    18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18,
+    28, 18, 18, 10, 14, 10, 10, 10, 10, 10, 9, 9, 3, 1, 5, 5, 5, 5, 5,
     5, 3, 3, 82, 82, 66, 66, 64, 64, 64, 64, 64
 };
 */
@@ -184,7 +184,7 @@ int dlp_is_valid_cc(const unsigned char *buffer, int length)
     int pad_allowance = MAX_CC_BREAKS;
     const struct iin_map_struct * iin;
     int need;
-    
+
     if(buffer == NULL || length < 13)
         return 0;
     /* if the first digit is greater than 6 it isn't one of the major
@@ -211,10 +211,10 @@ int dlp_is_valid_cc(const unsigned char *buffer, int length)
 
     if (digits == IIN_SIZE)
         cc_digits[digits] = 0;
-    else 
+    else
         return 0;
 
-    /* See if it is a valid IIN. */ 
+    /* See if it is a valid IIN. */
     iin = get_iin(cc_digits);
     if (iin == NULL)
          return 0;
@@ -235,7 +235,7 @@ int dlp_is_valid_cc(const unsigned char *buffer, int length)
     if(digits < 13 || (i < length && isdigit(buffer[i])))
 	return 0;
 
-    //figure out luhn digits 
+    //figure out luhn digits
     for(i = digits - 1; i >= 0; i--)
     {
 	val = cc_digits[i] - '0';
@@ -260,10 +260,10 @@ static int contains_cc(const unsigned char *buffer, int length, int detmode)
     const unsigned char *idx;
     const unsigned char *end;
     int count = 0;
-    
+
     if(buffer == NULL || length < 13)
     {
-        return 0;         
+        return 0;
     }
 
     end = buffer + length;
@@ -288,7 +288,7 @@ static int contains_cc(const unsigned char *buffer, int length, int detmode)
         }
         idx++;
     }
-    
+
     return count;
 }
 
@@ -341,32 +341,32 @@ int dlp_has_mail(const unsigned char *buffer, int length)
 static int contains_phone(const unsigned char *buffer, int length, int detmode)
 {
     char buf[length+1];
-    char *pch;
     int count = 0;
-    int i;
-    int x;
+    int i, x;
+    const char s[2] = "\n";
+    char *token, *token2, *string, *tofree;
 
     strncpy(buf, buffer, length);
     buf[length] = '\0';
-    pch = strtok (buf," \n");
+    token = strtok(buf, s);
 
-    while (pch != NULL)
+    while (token != NULL)
     {
-        for (i = 0; i < strlen(pch); i++) {
-            printf("%C\n", pch[i]);
-            if (isdigit(pch[i])){
-                x = 1;
-                while(isdigit(pch[i+x])) {
-                    x++;
+        tofree = string = strdup(token);
+        while ((token2 = strsep(&string, " ")) != NULL)
+            if (strlen(token2) != 0) {
+                x = 0;
+                for (i = 0; i < strlen(token2); i++) {
+                    if (isdigit(token2[i])) {
+                        x++;
+                    }
                 }
-                if (x > 6) {
-                    count ++;
-                    i = i + x;
+                if (x > 8 && x < 20) {
+                    count++;
                 }
             }
-
-        }
-        pch = strtok (NULL, " \n");
+        free(tofree);
+        token = strtok(NULL, s);
     }
     return count;
 }
@@ -390,10 +390,10 @@ int dlp_is_valid_ssn(const unsigned char *buffer, int length, int format)
     int minlength;
     int retval = 1;
     char numbuf[12];
-    
+
     if(buffer == NULL)
         return 0;
-        
+
     minlength = (format==SSN_FORMAT_HYPHENS?11:9);
 
     if(length < minlength)
@@ -401,7 +401,7 @@ int dlp_is_valid_ssn(const unsigned char *buffer, int length, int format)
 
     if((length > minlength) && isdigit(buffer[minlength]))
 	return 0;
-        
+
     strncpy(numbuf, (const char*)buffer, minlength);
     numbuf[minlength] = 0;
 
@@ -412,52 +412,52 @@ int dlp_is_valid_ssn(const unsigned char *buffer, int length, int format)
 	    if(numbuf[3] != '-' || numbuf[6] != '-')
 		return 0;
 
-            if(sscanf((const char *) numbuf, 
-                      "%3d-%2d-%4d", 
-                      &area_number, 
-                      &group_number, 
+            if(sscanf((const char *) numbuf,
+                      "%3d-%2d-%4d",
+                      &area_number,
+                      &group_number,
                       &serial_number) != 3)
             {
                 return 0;
-            }       
+            }
             break;
         case SSN_FORMAT_STRIPPED:
 	    if(!cli_isnumber(numbuf))
 		return 0;
 
-            if(sscanf((const char *) numbuf,  
-                       "%3d%2d%4d", 
-                       &area_number, 
-                       &group_number, 
+            if(sscanf((const char *) numbuf,
+                       "%3d%2d%4d",
+                       &area_number,
+                       &group_number,
                        &serial_number) != 3)
              {
                  return 0;
-             }       
+             }
              break;
         default:
 	    cli_dbgmsg("dlp_is_valid_ssn: unknown format type %d \n", format);
 	    return 0;
     }
-        
+
     /* start validating */
-    /* validation data taken from 
+    /* validation data taken from
      * http://en.wikipedia.org/wiki/Social_Security_number_%28United_States%29
      */
-    if(area_number > MAX_AREA || 
-       area_number == 666 || 
-       area_number <= 0 || 
-       group_number <= 0 || 
-       group_number > 99 || 
+    if(area_number > MAX_AREA ||
+       area_number == 666 ||
+       area_number <= 0 ||
+       group_number <= 0 ||
+       group_number > 99 ||
        serial_number <= 0 ||
        serial_number > 9999)
         retval = 0;
-        
-    if(area_number == 987 && group_number == 65) 
+
+    if(area_number == 987 && group_number == 65)
     {
         if(serial_number >= 4320 && serial_number <= 4329)
             retval = 0;
     }
-    
+
     /*
     if(group_number > ssn_max_group[area_number])
         retval = 0;
@@ -473,9 +473,9 @@ static int contains_ssn(const unsigned char *buffer, int length, int format, int
     const unsigned char *idx;
     const unsigned char *end;
     int count = 0;
-    
+
     if(buffer == NULL || length < 9)
-        return 0; 
+        return 0;
 
     end = buffer + length;
     idx = buffer;
@@ -494,29 +494,29 @@ static int contains_ssn(const unsigned char *buffer, int length, int format, int
                 }
                 else
                 {
-                    return 1;                                                                            
+                    return 1;
                 }
             }
         }
         idx++;
     }
-    
-    return count;   
+
+    return count;
 }
 
 int dlp_get_stripped_ssn_count(const unsigned char *buffer, int length)
 {
-    return contains_ssn(buffer, 
-                        length, 
-                        SSN_FORMAT_STRIPPED, 
+    return contains_ssn(buffer,
+                        length,
+                        SSN_FORMAT_STRIPPED,
                         DETECT_MODE_COUNT);
 }
 
 int dlp_get_normal_ssn_count(const unsigned char *buffer, int length)
 {
-    return contains_ssn(buffer, 
-                        length, 
-                        SSN_FORMAT_HYPHENS, 
+    return contains_ssn(buffer,
+                        length,
+                        SSN_FORMAT_HYPHENS,
                         DETECT_MODE_COUNT);
 }
 
@@ -530,29 +530,29 @@ int dlp_get_ssn_count(const unsigned char *buffer, int length)
 
 int dlp_has_ssn(const unsigned char *buffer, int length)
 {
-    return (contains_ssn(buffer, 
-                         length, 
-                         SSN_FORMAT_HYPHENS, 
+    return (contains_ssn(buffer,
+                         length,
+                         SSN_FORMAT_HYPHENS,
                          DETECT_MODE_DETECT)
-            | contains_ssn(buffer, 
-                           length, 
-                           SSN_FORMAT_STRIPPED, 
+            | contains_ssn(buffer,
+                           length,
+                           SSN_FORMAT_STRIPPED,
                            DETECT_MODE_DETECT));
 }
 
 int dlp_has_stripped_ssn(const unsigned char *buffer, int length)
 {
-    return contains_ssn(buffer, 
-                        length, 
-                        SSN_FORMAT_STRIPPED, 
+    return contains_ssn(buffer,
+                        length,
+                        SSN_FORMAT_STRIPPED,
                         DETECT_MODE_DETECT);
 }
 
 int dlp_has_normal_ssn(const unsigned char *buffer, int length)
 {
-    return contains_ssn(buffer, 
-                        length, 
-                        SSN_FORMAT_HYPHENS, 
+    return contains_ssn(buffer,
+                        length,
+                        SSN_FORMAT_HYPHENS,
                         DETECT_MODE_DETECT);
 }
 
